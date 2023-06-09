@@ -1,0 +1,473 @@
+---
+title: "fitbit_user_data_analysis"
+output: html_document
+date: "2023-06-08"
+---
+
+
+##### 1. Understanding the business task:
+Identify user trends in how consumers are using non-Bellabeat smart devices. Use this insight to recommend a high-level marketing strategy that can be applied to one of Bellabeat's product to drive new business growth opportunities.  
+
+##### 2. Description of the data set we will be working with:
+The data set we will be using is from users who consented to sharing their fitbit usage data. The original source was easily found on zenodo.org however we got the dataset on kaggle.com shared by the user Mobius. This data set contains data about users tracking their sleep, weight, calories, intensities, steps, heart rate, activity and metabolic equivalents (METs). 
+
+The data set contains 18 CSV files:
+* Daily logs for activity, sleep, calories, intensities, steps
+* Hourly logs for steps, intensities and calories
+* Minute logs for sleep and METs
+* Minute logs for calories, intensities and steps as well separately organized into both wide and long formats
+* Lastly heart rate logs per 5 second intervals and weight logs
+
+##### 3. Preprocessing of the data - data manipulation and cleaning:
+Google spreadsheets was used for some quick pre-processing of each CSV files.
+1. Each data was processed to remove any duplicate entries.
+      * The following sets were found to have duplicate entries in spreadsheets - daily sleep (3 duplicates) and minute sleep logs (543 duplicates)
+      
+As the minute calories, intensities, steps, METs stored in the long format and the heart rate log contain very large amounts of data for Google spreadsheet, we will import them into R to remove duplicates. 
+
+```{r install tidyverse if not already installed}
+#install.packages("tidyverse")
+```
+
+```{r load tidyverse library}
+library(tidyverse)
+```
+
+```{r install and load lubridate library if not already loaded}
+#install.packages("lubridate")
+library(lubridate)
+```
+
+Let's import all of the CSV files using the readr library
+```{r importing daily logs for activity, include=FALSE}
+
+daily_activity <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/dailyActivity_merged.csv")
+daily_calories <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/dailyCalories_merged.csv")
+daily_intensities <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/dailyIntensities_merged.csv")
+daily_steps <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/dailySteps_merged.csv")
+daily_sleep <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/sleepDay_merged_v2.csv")
+
+```
+
+```{r importing hourly logs for steps, include=FALSE}
+
+hourly_calories <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/hourlyCalories_merged.csv")
+hourly_intensities <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/hourlyIntensities_merged.csv")
+hourly_steps <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/hourlySteps_merged.csv")
+
+```
+
+```{r importing minute logs for sleep and METs, include=FALSE}
+
+minute_METs <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/minuteMETsNarrow_merged.csv")
+minute_sleep <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/minuteSleep_merged_v2.csv")
+
+```
+
+```{r importing minute logs for calories, include=FALSE}
+
+minute_calories_w <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/minuteCaloriesWide_merged.csv")
+minute_intensities_w <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/minuteIntensitiesWide_merged.csv")
+minute_steps_w <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/minuteStepsWide_merged.csv")
+
+```
+
+```{r importing minute logs for calories, include=FALSE}
+
+minute_calories_l <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/minuteCaloriesNarrow_merged.csv")
+minute_intensities_l <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/minuteIntensitiesNarrow_merged.csv")
+minute_steps_l <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/minuteStepsNarrow_merged.csv")
+
+```
+
+```{r importing heart rate and weight logs, include=FALSE}
+
+heart_rate <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/heartrate_seconds_merged.csv")
+weight <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/weightLogInfo_merged.csv")
+
+```
+To ensure data was successfully imported we confirmed the number of columns and records matched the CSV file in Google spreadsheet. The number of records were counted using the 'COUNT() function in spreadsheet and compared to the number of observation in R's environment window after importing. 
+
+Now that the data have been imported let's remove the duplicates in the large CSV files that was not possible in spreadsheet, i.e. the long format minute calories, intensities, steps, METs and heart rate files. 
+
+```{r verifying if there are any duplicates in each of the data by counting the number of distinct observations in the data frames}
+
+n_distinct(heart_rate)
+n_distinct(minute_calories_l)
+n_distinct(minute_intensities_l)
+n_distinct(minute_steps_l)
+n_distinct(minute_METs)
+
+```
+When comparing the number of distinct records to the number of observations shown in R's environment window. We can see they are the same number thus being able to conclude these data have no duplicate records.
+
+
+2. Correct the date related columns to the right date-time format. During importing of the data frames they were recognized as 'char' data types.
+```{r verifying the data types of each column in table 'weight}
+str(weight)
+```
+
+We can see the date column is set to type 'char' in place of date-time. We can use the 'lubridate' package to format the date column accordingly.
+
+Now we can convert the 'Date' column to the Date-time data type.
+```{r change the 'Date' column data type to date-time format}
+weight$Date <- as.Date(weight$Date, format = "%m/%d/%y %I:%M:%S %p")
+```
+
+Confirming the Date column was correctly formatted
+```{r rechecking the column data types for table 'weight' to validate change took effect}
+str(weight)
+```
+
+Re-formatting all the other tables date columns
+
+
+```{r formating daily_activity table ActivityDate column}
+daily_activity$ActivityDate <- as.Date(daily_activity$ActivityDate, format = "%m/%d/%Y")
+str(daily_activity)
+
+```
+
+
+```{r formating daily_activity table ActivityDay column, include=FALSE}
+daily_calories$ActivityDay <- as.Date(daily_calories$ActivityDay, format = "%m/%d/%Y")
+str(daily_calories)
+```
+
+```{r formating daily_intensities table ActivityDay column, include=FALSE}
+daily_intensities$ActivityDay <- as.Date(daily_intensities$ActivityDay, format = "%m/%d/%Y")
+str(daily_intensities)
+```
+
+```{r formating daily_steps table ActivityDay column, include=FALSE}
+daily_steps$ActivityDay <- as.Date(daily_steps$ActivityDay, format = "%m/%d/%Y")
+str(daily_steps)
+```
+
+```{r formating daily_sleep table SleepDay column}
+daily_sleep$SleepDay <- as.POSIXct(daily_sleep$SleepDay, format = "%m/%d/%Y %I:%M:%S %p", tz= Sys.timezone())
+str(daily_sleep)
+```
+
+```{r formating hourly_calories table ActivityHour column}
+hourly_calories$ActivityHour <- as.POSIXct(hourly_calories$ActivityHour, format = "%m/%d/%Y %I:%M:%S %p", tz = Sys.timezone())
+str(hourly_calories)
+```
+
+```{r formating hourly_intensities table ActivityHour column}
+hourly_intensities$ActivityHour <- as.POSIXct(hourly_intensities$ActivityHour, format = "%m/%d/%Y %I:%M:%S %p", tz = Sys.timezone())
+str(hourly_intensities)
+```
+
+```{r formating hourly_steps table ActivityHour column}
+hourly_steps$ActivityHour <- as.POSIXct(hourly_steps$ActivityHour, format = "%m/%d/%Y %I:%M:%S %p", tz = Sys.timezone())
+head(hourly_steps)
+```
+
+```{r formating heart_rate table time column}
+heart_rate$Time <- as.POSIXct(heart_rate$Time, format = "%m/%d/%Y %I:%M:%S %p", tz = Sys.timezone())
+str(heart_rate)
+```
+
+```{r formating minute_calories_l table ActivityMinute column}
+minute_calories_l$ActivityMinute <- as.POSIXct(minute_calories_l$ActivityMinute, format = "%m/%d/%Y %I:%M:%S %p", tz = Sys.timezone())
+str(minute_calories_l)
+```
+
+```{r formating minute_intensities_l table ActivityMinute  column}
+minute_intensities_l$ActivityMinute <- as.POSIXct(minute_intensities_l$ActivityMinute, format= "%m/%d/%Y %I:%M:%S %p", tz = Sys.timezone())
+str(minute_intensities_l)
+```
+
+
+```{r formating minute_steps_l table ActivityMinute column, include=FALSE}
+minute_steps_l$ActivityMinute <- as.POSIXct(minute_steps_l$ActivityMinute, format = "%m/%d/%Y %I:%M:%S %p", tz = Sys.timezone())
+str(minute_steps_l)
+```
+
+```{r formating minute_sleep table date column, include=FALSE}
+minute_sleep$date <- as.POSIXct(minute_sleep$date, format = "%m/%d/%Y %I:%M:%S %p", tz = Sys.timezone())
+str(minute_sleep)
+```
+
+```{r formating minute_METs table ActivityMinute column, include=FALSE}
+minute_METs$ActivityMinute <- as.POSIXct(minute_METs$ActivityMinute, format = "%m/%d/%Y %I:%M:%S %p", tz = Sys.timezone())
+str(minute_METs)
+```
+
+```{r formating minute_calories_w table ActivityHour column, include=FALSE}
+minute_calories_w$ActivityHour <- as.POSIXct(minute_calories_w$ActivityHour, format = "%m/%d/%Y %I:%M:%S %p", tz= Sys.timezone())
+str(minute_calories_w)
+```
+
+```{r formating minute_intensities_w table ActivityHour column, include=FALSE}
+minute_intensities_w$ActivityHour <- as.POSIXct(minute_intensities_w$ActivityHour, format = "%m/%d/%Y %I:%M:%S %p", tz=Sys.timezone())
+str(minute_intensities_w)
+```
+
+```{r formating minute_steps_w table ActivityHour column, include=FALSE}
+minute_steps_w$ActivityHour <- as.POSIXct(minute_steps_w$ActivityHour, format = "%m/%d/%Y %I:%M:%S %p", tz=Sys.timezone())
+str(minute_steps_w)
+```
+3. We can rename column names to keep it consistent across tables based on the periods i.e. daily, hourly and minute logs.
+
+All daily tables named the date column 'ActivityDay' except for the daily_activity table. We can rename that.
+```{r renaming column}
+colnames(daily_activity)[colnames(daily_activity) == 'ActivityDate'] <- 'ActivityDay'
+```
+
+
+Now that the data have been cleaned and formatted we can proceed to use the data for analysis.
+
+##### 4. Finding insights through data analysis:
+
+1. Seeing if each tables contain sufficient data to draw reliable conclusions by verifying the sample size.
+
+```{r using n_distinct() function to see how many users used each feature}
+
+table_names <- c("daily_activity", 
+                 "daily_calories", 
+                 "daily_intensities", 
+                 "daily_sleep", 
+                 "daily_steps", 
+                 "hourly_calories", 
+                 "hourly_intensities", 
+                 "hourly_steps", 
+                 "minute_calories_l", 
+                 "minute_calories_w", 
+                 "minute_intensities_l", 
+                 "minute_intensities_w", 
+                 "minute_METs", 
+                 "minute_sleep", 
+                 "minute_steps_l", 
+                 "minute_steps_w", 
+                 "weight", 
+                 "heart_rate")
+
+table_names
+```
+
+```{r}
+user_count <- c(n_distinct(daily_activity$Id), 
+                n_distinct(daily_calories$Id), 
+                n_distinct(daily_intensities$Id), 
+                n_distinct(daily_sleep$Id), 
+                n_distinct(daily_steps$Id), 
+                n_distinct(hourly_calories$Id), 
+                n_distinct(hourly_intensities$Id), 
+                n_distinct(hourly_steps$Id), 
+                n_distinct(minute_calories_l$Id),
+                n_distinct(minute_calories_w$Id), 
+                n_distinct(minute_intensities_l$Id), 
+                n_distinct(minute_intensities_w$Id), 
+                n_distinct(minute_METs$Id), 
+                n_distinct(minute_sleep$Id), 
+                n_distinct(minute_steps_l$Id), 
+                n_distinct(minute_steps_w$Id), 
+                n_distinct(weight$Id), 
+                n_distinct(heart_rate$Id))
+user_count
+```
+
+```{r sharing results in a data frame}
+users_count_table <- data.frame(table_names, user_count)
+users_count_table
+```
+
+From this we can see users are not really making use of the weight, heart rate and sleep tracking features when it comes to the fitbit tracker compared to the Activity, Intensity, Calories, METs and Step tracker features. This potentially communicates users are more focused on using these devices to monitor their level of activeness. Additionally, the data were retrieved from a sample size of less than 30 for the weight, heart rate and sleep logs therefore we cannot proceed to use their tables for any analysis as they have a high uncertainty associated with them. According to the Central Limit Theorem we should have a minimum sample size of 30 for the analysis' results to start being reflective of the average population's response. 
+
+
+Let's compare the common columns across the different periods daily, hourly and minutely to see if we can aggregate and combine data frames for more interesting insights.
+```{r }
+head(hourly_calories)
+head(hourly_intensities)
+head(hourly_steps)
+```
+
+```{r echo=TRUE}
+head(daily_calories)
+head(daily_intensities)
+head(daily_steps)
+head(daily_activity)
+```
+
+2. We can create the following joined tables:
+* hourly - Calories, intensities, Steps tables joined on Id and ActivityHour
+
+```{r merging the hourly data tables}
+
+hourly_data <- merge(x=hourly_calories, y=hourly_intensities, all=TRUE)
+
+hourly_datas <- merge(x=hourly_data, y=hourly_steps, all=TRUE)
+
+head(hourly_datas) 
+```
+
+A closer look at the daily_activity table shows this table has the same daily calories, steps and intensities data already in its table. 
+
+We won't be working with any tables on the minute scale record as there are many 0 values for most records to provide any interesting insights.
+
+3. We can visualize some interesting correlations between calories burned and steps, intensity
+
+```{r visualize relationships between hourly steps and calories}
+h_calories_steps <- ggplot(data=hourly_datas) + 
+  geom_point(
+    mapping=aes(x=StepTotal, 
+                y=Calories,
+                color= Id, 
+                alpha=Id)) + 
+  scale_alpha(guide='none') +
+  scale_color_continuous(guide='none') +
+  geom_smooth(
+    mapping = aes(x=StepTotal, 
+                  y= Calories)) +
+  labs(x="Total Steps", 
+       y="Total Calories Burned",
+       title="Hourly Total Steps taken versus Total Calories Burned",
+       subtitle="FitBit Fitness Tracker Data (CC0: Public Domain, dataset made available through Mobius on Kaggle)",
+       caption= "A positive correlation can be seen with regards to taking more steps and burning more calories. \nWe differentiated users through the point color and opacity.") +
+  theme(axis.title=element_text(size=7),
+        axis.text=element_text(size=5),
+        plot.title = element_text(size=10),
+        plot.subtitle = element_text(size=6),
+        plot.caption = element_text(size=5))
+
+h_calories_steps
+```
+
+```{r visualize relationship between hourly total intensity and calories}
+h_calories_intensity <- ggplot(data=hourly_datas) + 
+  geom_point(
+    mapping=aes(x=TotalIntensity, 
+                y=Calories,
+                color= Id, 
+                alpha=Id)) + 
+  scale_alpha(guide='none') +
+  scale_color_continuous(guide='none') +
+  geom_smooth(
+    mapping = aes(x=TotalIntensity, 
+                  y= Calories)) +
+  labs(x="Intensity", 
+       y="Total Calories Burned",
+       title="Hourly Activity Intensity versus Total Calories Burned",
+       subtitle="FitBit Fitness Tracker Data (CC0: Public Domain, dataset made available through Mobius on Kaggle)",
+       caption= "A stronger positive correlation can be seen with regards to   being active at a higher intensity and burning more calories compared to taking more steps. \nHere, we differentiated users through the point color and opacity again.") +
+  theme(axis.title=element_text(size=7),
+        axis.text=element_text(size=5),
+        plot.title = element_text(size=10),
+        plot.subtitle = element_text(size=6),
+        plot.caption = element_text(size=5))
+
+h_calories_intensity
+```
+
+4. We can visualize the similar trends the between daily calories burned and active minutes, steps, and total distance. 
+
+```{r visualize relationship between Daily Total Steps and calories}
+d_calories_steps <- ggplot(data=daily_activity) + 
+  geom_point(
+    mapping=aes(x=TotalSteps, 
+                y=Calories,
+                color= Id, 
+                alpha=Id)) + 
+  scale_alpha(guide='none') +
+  scale_color_continuous(guide='none') +
+  geom_smooth(
+    mapping = aes(x=TotalSteps, 
+                  y= Calories)) +
+  labs(x="Total Steps", 
+       y="Total Calories Burned",
+       title="Daily Total Steps versus Total Calories Burned",
+       subtitle="FitBit Fitness Tracker Data (CC0: Public Domain, dataset made available through Mobius on Kaggle)",
+       caption= "A positive correlation can be seen with regards to  the daily total steps and burning more calories. \nHere, we differentiated users through the point color and opacity.") +
+  theme(axis.title=element_text(size=7),
+        axis.text=element_text(size=5),
+        plot.title = element_text(size=10),
+        plot.subtitle = element_text(size=6),
+        plot.caption = element_text(size=5))
+
+d_calories_steps
+```
+```{r visualize relationship between Daily Total distance and calories}
+d_calories_distance <- ggplot(data=daily_activity) + 
+  geom_point(
+    mapping=aes(x=TotalDistance, 
+                y=Calories,
+                color= Id, 
+                alpha=Id)) + 
+  scale_alpha(guide='none') +
+  scale_color_continuous(guide='none') +
+  geom_smooth(
+    mapping = aes(x=TotalDistance, 
+                  y= Calories)) +
+  labs(x="Total Distance", 
+       y="Total Calories Burned",
+       title="Daily Total Distance versus Total Calories Burned",
+       subtitle="FitBit Fitness Tracker Data (CC0: Public Domain, dataset made available through Mobius on Kaggle)",
+       caption= "A positive correlation can be seen with regards to  the daily total distance and burning more calories. \nHere, we differentiated users through the point color and opacity.") +
+  theme(axis.title=element_text(size=7),
+        axis.text=element_text(size=5),
+        plot.title = element_text(size=10),
+        plot.subtitle = element_text(size=6),
+        plot.caption = element_text(size=5))
+
+d_calories_distance
+```
+```{r visualize relationship between Very Active Minutes and calories}
+d_calories_active_mins <- ggplot(data=daily_activity) + 
+  geom_point(
+    mapping=aes(x=VeryActiveMinutes, 
+                y=Calories,
+                color= Id, 
+                alpha=Id)) + 
+  scale_alpha(guide='none') +
+  scale_color_continuous(guide='none') +
+  geom_smooth(
+    mapping = aes(x=VeryActiveMinutes, 
+                  y= Calories)) +
+  labs(x="Total Very Active Minutes", 
+       y="Total Calories Burned",
+       title="Daily Very Active Minute versus Total Calories Burned",
+       subtitle="FitBit Fitness Tracker Data (CC0: Public Domain, dataset made available through Mobius on Kaggle)",
+       caption= "A positive but weaker correlation can be seen with regards to the daily active minutes and burning more calories. \nHere, we differentiated users through the point color and opacity.") +
+  theme(axis.title=element_text(size=7),
+        axis.text=element_text(size=5),
+        plot.title = element_text(size=10),
+        plot.subtitle = element_text(size=6),
+        plot.caption = element_text(size=5))
+
+d_calories_active_mins
+```
+
+
+
+5. SQL was used to create a two new data frames containing the averages of the different variables grouped by the user. We can import those dataset to R using the readr() function.
+
+```{r}
+daily_averages <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/daily_averages.csv")
+
+hourly_averages <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/hourly_averages.csv")
+
+head(daily_averages)
+
+head(hourly_averages)
+```
+We can use this data to get an estimate of the average level of activeness each user expends daily and hourly. 
+
+```{r daily average user active expendenture }
+daily_user_avg <- daily_averages %>%
+  summarize(mean(AvgCalorie), mean(AvgStepTotal), mean(AvgTotalDistance), mean(AvgVeryActiveMinutes), mean(AvgFairlyActiveMinutes), mean(AvgLightlyActiveMinutes))
+
+daily_user_avg
+```
+
+```{r hourly average user active expendenture }
+hourlyly_user_avg <- hourly_averages %>%
+  summarize(mean(AvgCalories), mean(AvgIntensity), mean(AvgStepTotal))
+
+hourlyly_user_avg
+```
+
+With these analysis we are now ready to share some interesting insights.
+
+
