@@ -1,6 +1,8 @@
 ---
 title: "fitbit_user_data_analysis"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 date: "2023-06-08"
 ---
 
@@ -38,6 +40,11 @@ library(tidyverse)
 library(lubridate)
 ```
 
+```{r install and load ggplot2 library if not already loaded}
+#install.packages("ggplot2")
+library(ggplot2)
+```
+
 Let's import all of the CSV files using the readr library
 ```{r importing daily logs for activity, include=FALSE}
 
@@ -64,7 +71,7 @@ minute_sleep <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/minuteSle
 
 ```
 
-```{r importing minute logs for calories, include=FALSE}
+```{r importing minute logs wide for calories, include=FALSE}
 
 minute_calories_w <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/minuteCaloriesWide_merged.csv")
 minute_intensities_w <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/minuteIntensitiesWide_merged.csv")
@@ -72,7 +79,7 @@ minute_steps_w <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/minuteS
 
 ```
 
-```{r importing minute logs for calories, include=FALSE}
+```{r importing minute logs long for calories, include=FALSE}
 
 minute_calories_l <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/minuteCaloriesNarrow_merged.csv")
 minute_intensities_l <- read_csv("/cloud/project/Fitabase Data 4.12.16-5.12.16/minuteIntensitiesNarrow_merged.csv")
@@ -103,19 +110,19 @@ When comparing the number of distinct records to the number of observations show
 
 
 2. Correct the date related columns to the right date-time format. During importing of the data frames they were recognized as 'char' data types.
-```{r verifying the data types of each column in table 'weight}
+```{r verifying the data types of each column in table weight}
 str(weight)
 ```
 
 We can see the date column is set to type 'char' in place of date-time. We can use the 'lubridate' package to format the date column accordingly.
 
 Now we can convert the 'Date' column to the Date-time data type.
-```{r change the 'Date' column data type to date-time format}
+```{r change the Date column data type to date-time format}
 weight$Date <- as.Date(weight$Date, format = "%m/%d/%y %I:%M:%S %p")
 ```
 
 Confirming the Date column was correctly formatted
-```{r rechecking the column data types for table 'weight' to validate change took effect}
+```{r rechecking the column data types for table weight to validate change took effect}
 str(weight)
 ```
 
@@ -209,6 +216,7 @@ str(minute_intensities_w)
 minute_steps_w$ActivityHour <- as.POSIXct(minute_steps_w$ActivityHour, format = "%m/%d/%Y %I:%M:%S %p", tz=Sys.timezone())
 str(minute_steps_w)
 ```
+
 3. We can rename column names to keep it consistent across tables based on the periods i.e. daily, hourly and minute logs.
 
 All daily tables named the date column 'ActivityDay' except for the daily_activity table. We can rename that.
@@ -334,6 +342,7 @@ h_calories_steps <- ggplot(data=hourly_datas) +
 
 h_calories_steps
 ```
+
 
 ```{r visualize relationship between hourly total intensity and calories}
 h_calories_intensity <- ggplot(data=hourly_datas) + 
@@ -462,10 +471,10 @@ daily_user_avg
 ```
 
 ```{r hourly average user active expendenture }
-hourlyly_user_avg <- hourly_averages %>%
+hourly_user_avg <- hourly_averages %>%
   summarize(mean(AvgCalories), mean(AvgIntensity), mean(AvgStepTotal))
 
-hourlyly_user_avg
+hourly_user_avg
 ```
 
 With these analysis we are now ready to share some interesting insights.
