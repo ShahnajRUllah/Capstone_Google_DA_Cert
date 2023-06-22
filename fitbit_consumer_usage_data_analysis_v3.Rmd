@@ -1,8 +1,9 @@
 ---
 title: "fitbit_user_data_analysis"
 output:
-  html_document: default
+  word_document: default
   pdf_document: default
+  html_document: default
 date: "2023-06-08"
 ---
 
@@ -415,7 +416,7 @@ h_calories_intensity <- ggplot(data=hourly_datas) +
 h_calories_intensity
 ```
 
-4. We can visualize the similar trends the between daily calories burned and active minutes, steps, and total distance. 
+4. We can visualize the similar trends between daily calories burned and active minutes, steps, and total distance. 
 
 ```{r visualize relationship between Daily Total Steps and calories}
 d_calories_steps <- ggplot(data=daily_activity) + 
