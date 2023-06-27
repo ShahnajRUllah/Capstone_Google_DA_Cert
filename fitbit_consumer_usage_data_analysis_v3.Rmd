@@ -326,6 +326,28 @@ user_count
 users_count_table <- data.frame(table_names, user_count)
 users_count_table
 ```
+```{r creating list of tables name}
+
+table_name_list <- c("daily_activity", 
+                 "hourly_calories", 
+                 "hourly_intensities", 
+                 "hourly_steps")
+
+table_name_list
+```
+
+```{r number of users counts}
+user_counts <- c(n_distinct(daily_activity$Id), 
+   n_distinct(hourly_calories$Id), 
+   n_distinct(hourly_intensities$Id), 
+   n_distinct(hourly_steps$Id))
+user_counts
+```
+
+```{r sharing results in a data frame}
+user_count_table <- data.frame(table_name_list, user_counts)
+user_count_table
+```
 
 From this we can see users are not really making use of the weight, heart rate and sleep tracking features when it comes to the fitbit tracker compared to the Activity, Intensity, Calories, METs and Step tracker features. This potentially communicates users are more focused on using these devices to monitor their level of activeness. Additionally, the data were retrieved from a sample size of less than 30 for the weight, heart rate and sleep logs therefore we cannot proceed to use their tables for any analysis as they have a high uncertainty associated with them. According to the Central Limit Theorem we should have a minimum sample size of 30 for the analysis' results to start being reflective of the average population's response. 
 
